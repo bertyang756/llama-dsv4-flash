@@ -337,8 +337,18 @@ static void soft_max_f32_cuda(const float *                                x,
     const int id       = ggml_cuda_get_device();
     const size_t smpbo = ggml_cuda_info().devices[id].smpbo;
 
+    // ============ 调试代码 ============
+    // fprintf(stderr, "soft_max_f32_cuda: nth=%d, ncols_x=%ld\n", nth, (long)ncols_x);
+    // fprintf(stderr, "  block_dims: (%d, %d, %d)\n", block_dims.x, block_dims.y, block_dims.z);
+    // fprintf(stderr, "  block_nums: (%d, %d, %d)\n", block_nums.x, block_nums.y, block_nums.z);
+    // fprintf(stderr, "  nbytes_shared: %zu, smpbo: %zu, nbytes_shared <= smpbo: %d\n", 
+    //         nbytes_shared, smpbo, (int)(nbytes_shared <= smpbo));
+    // fprintf(stderr, "  use_f16: %d, mask==null: %d, sinks==null: %d\n",
+    //         std::is_same_v<T, half>, (int)(mask == nullptr), (int)(sinks == nullptr));
+    // ============ 调试结束 ============
 
-    if (nbytes_shared <= smpbo) {
+
+    if (false /* nbytes_shared <= smpbo */) {
         launch_soft_max_kernels<32, 64, 128, 256, 512, 1024, 2048, 4096>(x, mask, sinks, dst, params, stream, block_dims, block_nums, nbytes_shared);
     } else {
         // Parallelize across SMs for top-p/dist-sampling
@@ -435,6 +445,32 @@ void ggml_cuda_op_soft_max(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
     params.max_bias = max_bias;
     params.m0 = m0;
     params.m1 = m1;
+
+    // ============ 调试代码 ============
+    // fprintf(stderr, "\n=== SOFT_MAX DEBUG ===\n");
+    // fprintf(stderr, "src0->name: %s\n", src0->name ? src0->name : "null");
+    // fprintf(stderr, "dst->name: %s\n", dst->name ? dst->name : "null");
+    // fprintf(stderr, "params.ne00 (ne[0]): %ld\n", (long)params.ne00);
+    // fprintf(stderr, "params.ne01 (ne[1]): %ld\n", (long)params.ne01);
+    // fprintf(stderr, "params.ne02 (ne[2]): %ld\n", (long)params.ne02);
+    // fprintf(stderr, "params.ne03 (ne[3]): %ld\n", (long)params.ne03);
+    // fprintf(stderr, "params.ncols: %ld\n", (long)params.ncols);
+    // fprintf(stderr, "params.nrows_x: %ld\n", (long)params.nrows_x);
+    // fprintf(stderr, "params.nrows_y: %ld\n", (long)params.nrows_y);
+    // fprintf(stderr, "params.nheads: %u\n", params.nheads);
+    // fprintf(stderr, "params.n_head_log2: %u\n", params.n_head_log2);
+    
+    // 检查关键参数
+    // if (params.ne00 == 0) {
+    //     fprintf(stderr, "ERROR: ne00 is 0!\n");
+    // }
+    // if (params.ne01 == 0) {
+    //     fprintf(stderr, "ERROR: ne01 is 0!\n");
+    // }
+    // if (params.ne02 == 0) {
+    //     fprintf(stderr, "ERROR: ne02 is 0!\n");
+    // }
+    // ============ 调试代码结束 ============
 
     if (use_f16) {
         soft_max_f32_cuda(src0_d, (const half *) src1_d, (const float *) src2_d, dst_d, params, stream, ctx);
